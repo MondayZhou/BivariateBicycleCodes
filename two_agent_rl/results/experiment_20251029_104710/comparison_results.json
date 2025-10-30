@@ -1,0 +1,106 @@
+{
+  "bposd": {
+    "error_rates": [
+      0.001,
+      0.002
+    ],
+    "logical_error_rates": [
+      0.88,
+      0.96
+    ],
+    "success_rates": [
+      0.12,
+      0.04
+    ],
+    "avg_decode_time": [
+      0.025358147621154785,
+      0.03583028793334961
+    ],
+    "syndrome_satisfaction_rates": [
+      0.12,
+      0.04
+    ],
+    "avg_correction_weight": [
+      6.94,
+      13.78
+    ]
+  },
+  "two_agent": {
+    "error_rates": [
+      0.001,
+      0.002
+    ],
+    "logical_error_rates": [
+      1.0,
+      1.0
+    ],
+    "success_rates": [
+      0.0,
+      0.0
+    ],
+    "avg_decode_time": [
+      0.06311634063720703,
+      0.07213008880615235
+    ],
+    "syndrome_satisfaction_rates": [
+      0.0,
+      0.0
+    ],
+    "avg_correction_weight": [
+      70.56,
+      53.24
+    ]
+  },
+  "single_agent": {
+    "error_rates": [
+      0.001,
+      0.002
+    ],
+    "logical_error_rates": [
+      0.94,
+      0.98
+    ],
+    "success_rates": [
+      0.06,
+      0.02
+    ],
+    "avg_decode_time": [
+      0.020653080940246583,
+      0.019478135108947754
+    ],
+    "syndrome_satisfaction_rates": [
+      0.06,
+      0.02
+    ],
+    "avg_correction_weight": [
+      0.0,
+      0.0
+    ]
+  },
+  "hybrid": {
+    "error_rates": [
+      0.001,
+      0.002
+    ],
+    "logical_error_rates": [
+      0.9,
+      0.96
+    ],
+    "success_rates": [
+      0.1,
+      0.04
+    ],
+    "avg_decode_time": [
+      0.0802297067642212,
+      0.10555478572845459
+    ],
+    "syndrome_satisfaction_rates": [
+      0.1,
+      0.04
+    ],
+    "avg_correction_weight": [
+      56.52,
+      59.08
+    ]
+  }
+}

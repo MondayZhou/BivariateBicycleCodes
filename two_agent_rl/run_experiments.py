@@ -305,8 +305,8 @@ def parse_args():
 
     # Set defaults based on mode
     if args.mode == 'quick':
-        args.two_agent_timesteps = args.two_agent_timesteps or 5000
-        args.single_agent_timesteps = args.single_agent_timesteps or 5000
+        args.two_agent_timesteps = args.two_agent_timesteps or 100000
+        args.single_agent_timesteps = args.single_agent_timesteps or 100000
         args.eval_trials = 50
     elif args.mode == 'full':
         args.two_agent_timesteps = args.two_agent_timesteps or 100000

@@ -65,7 +65,7 @@ class BBCodeDecodingEnv:
         self.decode_Z_errors = decode_Z_errors
 
         # Initialize BB code
-        self.code_data = bivariate_bicycle_codes(m, ell, a, b, num_cycles)
+        self.code_data = bivariate_bicycle_codes(m, ell, a, b, num_cycles, error_rate)
 
         # Extract code parameters
         self.num_data_qubits_per_panel = m * ell

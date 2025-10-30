@@ -57,10 +57,10 @@ def example_1_train_two_agent_decoder():
         device='cpu'
     )
 
-    # Train (small example - use more timesteps in practice)
+    # Train (use more timesteps for production training)
     print("\nStarting training...")
     trainer.train(
-        total_timesteps=10000,  # Use 100000+ for real training
+        total_timesteps=100000,  # Increased from 10000 for better performance
         episodes_per_update=10,
         log_interval=5,
         save_interval=50,

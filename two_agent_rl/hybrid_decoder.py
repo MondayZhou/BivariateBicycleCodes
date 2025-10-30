@@ -93,29 +93,27 @@ class HybridBPOSD_RL_Decoder:
 
     def _initialize_bposd_decoders(self):
         """Initialize BP-OSD decoders for X and Z errors."""
-        # Get effective check matrices from code_data
-        HdecX = self.code_data.get('HdecX', self.code_data['hx'])
-        HdecZ = self.code_data.get('HdecZ', self.code_data['hz'])
+        # Use basic parity check matrices hx and hz
+        # These work with per-check syndromes (not full syndrome history)
+        hx = self.code_data['hx']
+        hz = self.code_data['hz']
+        
+        error_rate = self.code_data.get('error_rate', 0.001)
 
-        channel_probsX = self.code_data.get('channel_probsX', None)
-        channel_probsZ = self.code_data.get('channel_probsZ', None)
-
-        # Initialize X-error decoder
+        # Initialize X-error decoder (uses hz to decode X errors from Z-checks)
         self.bposd_X = bposd_decoder(
-            HdecX,
-            error_rate=0.001 if channel_probsX is None else None,
-            channel_probs=channel_probsX,
+            hz,
+            error_rate=error_rate,
             max_iter=self.bp_max_iter,
             bp_method=self.bp_method,
             osd_method=self.osd_method,
             osd_order=self.osd_order
         )
 
-        # Initialize Z-error decoder
+        # Initialize Z-error decoder (uses hx to decode Z errors from X-checks)
         self.bposd_Z = bposd_decoder(
-            HdecZ,
-            error_rate=0.001 if channel_probsZ is None else None,
-            channel_probs=channel_probsZ,
+            hx,
+            error_rate=error_rate,
             max_iter=self.bp_max_iter,
             bp_method=self.bp_method,
             osd_method=self.osd_method,
@@ -235,19 +233,23 @@ class HybridBPOSD_RL_Decoder:
         node_features_right: Optional[torch.Tensor] = None,
         edge_index_left: Optional[torch.Tensor] = None,
         edge_index_right: Optional[torch.Tensor] = None,
-        force_rl: bool = False
+        force_rl: bool = False,
+        syndrome_X_checks: Optional[np.ndarray] = None,
+        syndrome_Z_checks: Optional[np.ndarray] = None
     ) -> Tuple[np.ndarray, np.ndarray, Dict]:
         """
         Hybrid decoding: Try BP-OSD first, fall back to RL if needed.
 
         Args:
-            syndrome_X: X-check syndrome
-            syndrome_Z: Z-check syndrome
+            syndrome_X: X-check syndrome (can be full history, but per-check preferred)
+            syndrome_Z: Z-check syndrome (can be full history, but per-check preferred)
             node_features_left: Node features for RL (if available)
             node_features_right: Node features for RL (if available)
             edge_index_left: Edge index for RL (if available)
             edge_index_right: Edge index for RL (if available)
             force_rl: Force use of RL decoder
+            syndrome_X_checks: Per-check X syndromes (preferred for both BP-OSD and RL)
+            syndrome_Z_checks: Per-check Z syndromes (preferred for both BP-OSD and RL)
 
         Returns:
             correction_left: Correction for left panel
@@ -261,10 +263,17 @@ class HybridBPOSD_RL_Decoder:
             'switch_reason': None
         }
 
+        # Use per-check syndromes for both BP-OSD and RL
+        # BP-OSD with basic hx/hz matrices expects per-check syndromes
+        bposd_syndrome_X = syndrome_X_checks if syndrome_X_checks is not None else syndrome_X
+        bposd_syndrome_Z = syndrome_Z_checks if syndrome_Z_checks is not None else syndrome_Z
+        rl_syndrome_X = syndrome_X_checks if syndrome_X_checks is not None else syndrome_X
+        rl_syndrome_Z = syndrome_Z_checks if syndrome_Z_checks is not None else syndrome_Z
+        
         # Option 1: Forced RL usage
         if force_rl:
             correction_left, correction_right = self._rl_decode(
-                syndrome_X, syndrome_Z,
+                rl_syndrome_X, rl_syndrome_Z,
                 node_features_left, node_features_right,
                 edge_index_left, edge_index_right
             )
@@ -274,7 +283,7 @@ class HybridBPOSD_RL_Decoder:
             return correction_left, correction_right, info
 
         # Option 2: Try BP-OSD first
-        correction_X, correction_Z, bposd_info = self._bposd_decode(syndrome_X, syndrome_Z)
+        correction_X, correction_Z, bposd_info = self._bposd_decode(bposd_syndrome_X, bposd_syndrome_Z)
 
         # Split corrections into panels
         m_ell = self.code_data['m'] * self.code_data['ell']
@@ -282,17 +291,19 @@ class HybridBPOSD_RL_Decoder:
         correction_right_bposd = (correction_X[m_ell:] + correction_Z[m_ell:]) % 2
 
         # Compute confidence scores
+        # correction_X was decoded using hz, so check with hz
         confidence_X = self._compute_confidence(
             correction_X,
-            syndrome_Z,
-            self.code_data.get('HdecX', self.code_data['hx']),
+            bposd_syndrome_Z,
+            self.code_data['hz'],
             bposd_info['bp_converged_X']
         )
 
+        # correction_Z was decoded using hx, so check with hx
         confidence_Z = self._compute_confidence(
             correction_Z,
-            syndrome_X,
-            self.code_data.get('HdecZ', self.code_data['hz']),
+            bposd_syndrome_X,
+            self.code_data['hx'],
             bposd_info['bp_converged_Z']
         )
 
@@ -325,7 +336,7 @@ class HybridBPOSD_RL_Decoder:
         # Execute decision
         if use_rl and (node_features_left is not None):
             correction_left, correction_right = self._rl_decode(
-                syndrome_X, syndrome_Z,
+                rl_syndrome_X, rl_syndrome_Z,
                 node_features_left, node_features_right,
                 edge_index_left, edge_index_right
             )

@@ -128,7 +128,7 @@ class DecoderBenchmark:
 
                 elif decoder_type == 'hybrid':
                     correction_left, correction_right, _ = self._decode_hybrid(
-                        decoder, syndrome_X, syndrome_Z
+                        decoder, syndrome_dict
                     )
                     correction = np.concatenate([correction_left, correction_right])
 
@@ -260,8 +260,9 @@ class DecoderBenchmark:
         from ldpc.bposd_decoder import bposd_decoder
 
         # Initialize BP-OSD decoders
+        # bposd_X uses hz to decode X errors from Z-check syndromes
         bposd_X = bposd_decoder(
-            self.code_data['hx'],
+            self.code_data['hz'],
             error_rate=0.001,
             max_iter=10000,
             bp_method="ms",
@@ -269,8 +270,9 @@ class DecoderBenchmark:
             osd_order=7
         )
 
+        # bposd_Z uses hx to decode Z errors from X-check syndromes
         bposd_Z = bposd_decoder(
-            self.code_data['hz'],
+            self.code_data['hx'],
             error_rate=0.001,
             max_iter=10000,
             bp_method="ms",
@@ -290,25 +292,28 @@ class DecoderBenchmark:
     def _decode_hybrid(
         self,
         decoder: HybridBPOSD_RL_Decoder,
-        syndrome_X: np.ndarray,
-        syndrome_Z: np.ndarray
+        syndrome_dict: Dict
     ) -> Tuple[np.ndarray, np.ndarray, Dict]:
         """Decode using hybrid decoder."""
+        # Extract per-check syndromes (used by both BP-OSD and RL)
+        syndrome_X_checks = syndrome_dict['X_checks']
+        syndrome_Z_checks = syndrome_dict['Z_checks']
+        
         # Create node features for RL fallback
         correction_left = np.zeros(self.m * self.ell, dtype=np.int8)
         correction_right = np.zeros(self.m * self.ell, dtype=np.int8)
 
         node_features_left = self.env._create_node_features(
-            syndrome_X, syndrome_Z, correction_left, correction_right, 'left'
+            syndrome_X_checks, syndrome_Z_checks, correction_left, correction_right, 'left'
         ).to(self.device)
 
         node_features_right = self.env._create_node_features(
-            syndrome_X, syndrome_Z, correction_left, correction_right, 'right'
+            syndrome_X_checks, syndrome_Z_checks, correction_left, correction_right, 'right'
         ).to(self.device)
 
         correction_left, correction_right, info = decoder.decode(
-            syndrome_X,
-            syndrome_Z,
+            syndrome_X_checks,
+            syndrome_Z_checks,
             node_features_left,
             node_features_right,
             self.edge_index_left.to(self.device),
